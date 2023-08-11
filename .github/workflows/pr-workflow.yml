@@ -1,0 +1,38 @@
+name: Pull Request Testing
+
+env:
+  MIX_ENV: test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.14.2"
+          otp-version: "25"
+
+      - name: Get mix dependencies
+        run: mix deps.get
+
+      - name: Compile project
+        run: mix compile --warnings-as-errors
+
+      - name: Mix format check
+        run: mix format --check-formatted
+
+      - name: Run tests
+        run: mix test --no-start
