@@ -82,6 +82,8 @@ defmodule AbsintheRemote.RemoteSchema do
 
       defp fetch_key(%Absinthe.Blueprint.Input.Argument{name: name}), do: name
 
+      defp fetch_normalized_value(%Absinthe.Blueprint.Input.Null{}), do: nil
+
       defp fetch_normalized_value(some_input) do
         if Map.has_key?(some_input, :value) do
           some_input.value

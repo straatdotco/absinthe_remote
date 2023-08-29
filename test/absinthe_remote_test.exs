@@ -24,6 +24,7 @@ defmodule AbsintheRemoteTest do
     type Query {
       parent(id: ID!): SomeParent
       child(id: ID!): SomeChild
+      optional(id: ID): SomeParent
       operation: SomeOperation
     }
     """)
@@ -167,5 +168,27 @@ defmodule AbsintheRemoteTest do
              LocalSchema,
              operation_name: "ParentQuery"
            ) == {:ok, %{data: %{parent: %{id: "1234"}}}}
+  end
+
+  test "allows nullable query parameters" do
+    assert AbsintheRemote.run(
+             """
+             query($id: ID) {
+              optional(id: $id) {
+                id
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{"id" => nil}
+           ) ==
+             {:ok,
+              %{
+                data: %{
+                  optional: %{
+                    id: "1234"
+                  }
+                }
+              }}
   end
 end
