@@ -60,7 +60,7 @@ defmodule AbsintheRemote.RemoteSchema do
       defp keys_to_atoms(value), do: value
 
       defp argument_to_query_variable(%Absinthe.Blueprint.Input.Argument{} = arg) do
-        # Ideally grab the key from
+        # Important to use the normalized fields because they are what the schema actually calls for
         key = fetch_key(arg)
         value = fetch_normalized_value(arg.input_value.normalized)
 
@@ -81,6 +81,15 @@ defmodule AbsintheRemote.RemoteSchema do
            do: name
 
       defp fetch_key(%Absinthe.Blueprint.Input.Argument{name: name}), do: name
+
+      defp fetch_normalized_value(%Absinthe.Blueprint.Input.Object{} = obj) do
+        # Since this is an object, we need to recurse a bit
+        obj.fields
+        |> Enum.map(fn %Absinthe.Blueprint.Input.Field{} = field ->
+          {field.name, fetch_normalized_value(field.input_value.normalized)}
+        end)
+        |> Enum.into(%{})
+      end
 
       defp fetch_normalized_value(%Absinthe.Blueprint.Input.Null{}), do: nil
 
