@@ -198,8 +198,6 @@ defmodule AbsintheRemote.RemoteResolution do
 
   # bp_field needs to have a concrete schema node, AKA no unions or interfaces
   defp do_resolve_field(res, source, path) do
-    # dbg(res)
-
     res
     |> reduce_resolution
     |> case do
