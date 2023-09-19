@@ -14,10 +14,11 @@ defmodule AbsintheRemote.InputTest do
       id: ID!
       content: String
       author: String
+      posts(sorting: String): [Message]
     }
 
     type Query {
-      getMessage(search: MessageSearch): Message
+      getMessage(search: MessageSearch, sorting: String): Message
     }
     """)
 
@@ -32,6 +33,30 @@ defmodule AbsintheRemote.InputTest do
          id: "1234",
          content: content,
          author: author_name
+       }}
+    end
+
+    def resolve_query(_query, _operation, %{"sorting" => "ASC"}) do
+      {:ok,
+       %{
+         id: "1234",
+         posts: [
+           %{
+             id: "4321"
+           }
+         ]
+       }}
+    end
+
+    def resolve_query(_query, _operation, %{"parentSorting" => parent, "childSorting" => child}) do
+      {:ok,
+       %{
+         id: parent,
+         posts: [
+           %{
+             id: child
+           }
+         ]
        }}
     end
   end
@@ -63,6 +88,75 @@ defmodule AbsintheRemote.InputTest do
                      id: "1234",
                      content: "Hello",
                      author: "Mr Foo Bar"
+                   }
+                 }
+               }
+             }
+  end
+
+  test "can query child input types" do
+    assert AbsintheRemote.run(
+             """
+             query($sorting: String) {
+              getMessage {
+                id
+                posts(sorting: $sorting) {
+                  id
+                }
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{
+               "sorting" => "ASC"
+             }
+           ) ==
+             {
+               :ok,
+               %{
+                 data: %{
+                   getMessage: %{
+                     id: "1234",
+                     posts: [
+                       %{
+                         id: "4321"
+                       }
+                     ]
+                   }
+                 }
+               }
+             }
+  end
+
+  test "handles aliased variables" do
+    assert AbsintheRemote.run(
+             """
+             query($parentSorting: String, $childSorting: String) {
+              getMessage(sorting: $parentSorting) {
+                id
+                posts(sorting: $childSorting) {
+                  id
+                }
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{
+               "parentSorting" => "ASC",
+               "childSorting" => "DESC"
+             }
+           ) ==
+             {
+               :ok,
+               %{
+                 data: %{
+                   getMessage: %{
+                     id: "ASC",
+                     posts: [
+                       %{
+                         id: "DESC"
+                       }
+                     ]
                    }
                  }
                }
