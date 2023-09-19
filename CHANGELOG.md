@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.1
+
+- Fix: Make child arguments work correctly
+
 ## 0.2.0
 
 - Feature: Support object input types

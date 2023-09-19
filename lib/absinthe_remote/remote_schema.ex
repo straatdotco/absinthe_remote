@@ -32,10 +32,19 @@ defmodule AbsintheRemote.RemoteSchema do
         query_variables =
           Enum.map(query.arguments, &argument_to_query_variable/1) |> Enum.into(%{})
 
+        selection_variables =
+          Enum.map(query.selections, fn selection ->
+            Enum.map(selection.arguments, &argument_to_query_variable/1)
+          end)
+          |> List.flatten()
+          |> Enum.into(%{})
+
+        variables = Map.merge(query_variables, selection_variables)
+
         case resolve_query(
                resolution.private.raw_source,
                resolution.private.operation_name,
-               query_variables
+               variables
              ) do
           {:ok, result} ->
             # pop the value out of the inner struct,
@@ -94,10 +103,10 @@ defmodule AbsintheRemote.RemoteSchema do
       defp fetch_normalized_value(%Absinthe.Blueprint.Input.Null{}), do: nil
 
       defp fetch_normalized_value(some_input) do
-        if Map.has_key?(some_input, :value) do
+        if is_map(some_input) and Map.has_key?(some_input, :value) do
           some_input.value
         else
-          raise "Unknown input type"
+          raise "Unknown input type #{inspect(some_input)}"
         end
       end
     end
