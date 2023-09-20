@@ -15,6 +15,7 @@ defmodule AbsintheRemote.InputTest do
       content: String
       author: String
       posts(sorting: String): [Message]
+      children: [Message]
     }
 
     type Query {
@@ -40,9 +41,14 @@ defmodule AbsintheRemote.InputTest do
       {:ok,
        %{
          id: "1234",
-         posts: [
+         children: [
            %{
-             id: "4321"
+             id: "4321",
+             posts: [
+               %{
+                 id: "4321-1"
+               }
+             ]
            }
          ]
        }}
@@ -100,8 +106,11 @@ defmodule AbsintheRemote.InputTest do
              query($sorting: String) {
               getMessage {
                 id
-                posts(sorting: $sorting) {
+                children {
                   id
+                  posts(sorting: $sorting) {
+                    id
+                  }
                 }
               }
              }
@@ -117,9 +126,14 @@ defmodule AbsintheRemote.InputTest do
                  data: %{
                    getMessage: %{
                      id: "1234",
-                     posts: [
+                     children: [
                        %{
-                         id: "4321"
+                         id: "4321",
+                         posts: [
+                           %{
+                             id: "4321-1"
+                           }
+                         ]
                        }
                      ]
                    }

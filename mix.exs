@@ -2,7 +2,7 @@ defmodule AbsintheRemote.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/straatdotco/absinthe_remote"
-  @version "0.2.1"
+  @version "0.2.2"
 
   def project do
     [

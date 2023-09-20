@@ -33,9 +33,7 @@ defmodule AbsintheRemote.RemoteSchema do
           Enum.map(query.arguments, &argument_to_query_variable/1) |> Enum.into(%{})
 
         selection_variables =
-          Enum.map(query.selections, fn selection ->
-            Enum.map(selection.arguments, &argument_to_query_variable/1)
-          end)
+          selections_to_query_variables(query.selections, [])
           |> List.flatten()
           |> Enum.into(%{})
 
@@ -54,6 +52,33 @@ defmodule AbsintheRemote.RemoteSchema do
           other ->
             other
         end
+      end
+
+      defp selections_to_query_variables(
+             [%Absinthe.Blueprint.Document.Field{selections: []} = field | tail],
+             acc
+           ) do
+        selections_to_query_variables(
+          tail,
+          acc ++ Enum.map(field.arguments, &argument_to_query_variable/1)
+        )
+      end
+
+      defp selections_to_query_variables(
+             [%Absinthe.Blueprint.Document.Field{selections: selections} = field | tail],
+             acc
+           ) do
+        # Recurse!
+        selections_to_query_variables(
+          tail,
+          acc ++
+            Enum.map(field.arguments, &argument_to_query_variable/1) ++
+            selections_to_query_variables(selections, [])
+        )
+      end
+
+      defp selections_to_query_variables([], acc) do
+        acc
       end
 
       defp flatten_errors([%{"message" => message} | rest], acc) do
