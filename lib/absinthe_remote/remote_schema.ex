@@ -1,4 +1,8 @@
 defmodule AbsintheRemote.RemoteSchema do
+  @moduledoc """
+  RemoteSchema is used only during the initial schema complication. It is not used for actually translating values back from the server.
+  """
+
   @callback resolve_query(
               query :: binary(),
               operation_name :: binary(),
@@ -11,9 +15,12 @@ defmodule AbsintheRemote.RemoteSchema do
 
       @behaviour AbsintheRemote.RemoteSchema
 
-      def hydrate(%Absinthe.Blueprint.Schema.FieldDefinition{identifier: query}, [
-            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{identifier: :query} | _
-          ]) do
+      def hydrate(
+            %Absinthe.Blueprint.Schema.FieldDefinition{identifier: query} = root,
+            [
+              %Absinthe.Blueprint.Schema.ObjectTypeDefinition{identifier: :query} | _
+            ] = other
+          ) do
         case Atom.to_string(query) do
           "__" <> _internal ->
             # If this is an internal query (__type, __schema, etc), let it do its thing
@@ -47,11 +54,23 @@ defmodule AbsintheRemote.RemoteSchema do
           {:ok, result} ->
             # pop the value out of the inner struct,
             # of if it doesn't exist, just use the result
-            {:ok, Map.get(result, String.to_atom(query.name), result)}
+            output = Map.get(result, String.to_atom(query.name), result)
+            # dbg(output)
+            {:ok, output}
 
           other ->
             other
         end
+      end
+
+      # def middleware(middleware, %{identifier: identifier} = field, object) do
+      #   new_middleware_spec = {{__MODULE__, :get_camelized_key}, identifier}
+
+      #   Absinthe.Schema.replace_default(middleware, new_middleware_spec, field, object)
+      # end
+
+      def get_camelized_key(%{source: source} = res, key) do
+        %{res | state: :resolved, value: Map.get(source, key)}
       end
 
       defp selections_to_query_variables(
@@ -86,12 +105,6 @@ defmodule AbsintheRemote.RemoteSchema do
       end
 
       defp flatten_errors(_, acc), do: acc
-
-      defp keys_to_atoms(string_key_map) when is_map(string_key_map) do
-        for {key, val} <- string_key_map, into: %{}, do: {String.to_atom(key), keys_to_atoms(val)}
-      end
-
-      defp keys_to_atoms(value), do: value
 
       defp argument_to_query_variable(%Absinthe.Blueprint.Input.Argument{} = arg) do
         # Important to use the normalized fields because they are what the schema actually calls for

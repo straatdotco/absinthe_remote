@@ -4,7 +4,9 @@ defmodule AbsintheRemote.RemoteResolution do
 
   From the `absinthe` project @ https://github.com/absinthe-graphql/absinthe/blob/fa9c8b68b88e88e4fb073d87681812a15e22ce1f/lib/absinthe/phase/document/execution/resolution.ex
 
-  The only modification is to include raw_query and operation_name for later retrieval.
+  Modifications from source:
+    * Include raw_query and operation_name for later retrieval
+
   """
 
   # Runs resolution functions in a blueprint.
@@ -20,6 +22,11 @@ defmodule AbsintheRemote.RemoteResolution do
 
   @spec run(Blueprint.t(), Keyword.t()) :: Phase.result_t()
   def run(bp_root, options \\ []) do
+    # By the time it gets here, camelCase is gone :(
+
+    IO.inspect(bp_root)
+    Kernel.exit(-1)
+
     case Blueprint.current_operation(bp_root) do
       nil -> {:ok, bp_root}
       op -> resolve_current(bp_root, op, options)
@@ -281,7 +288,6 @@ defmodule AbsintheRemote.RemoteResolution do
     full_type = Type.expand(bp_field.schema_node.type, schema)
 
     bp_field = put_in(bp_field.schema_node.type, full_type)
-
     # if there are any errors, the value is always nil
     value =
       case errors do

@@ -17,10 +17,15 @@ defmodule AbsintheRemote.Result do
   end
 
   defp process(blueprint) do
+    # Results do not yet exist in the blueprint
+
     result =
       case blueprint.execution do
         %{validation_errors: [], result: result} ->
-          {:ok, data(result, [])}
+          # dbg(result)
+
+          # result.fields[0].root_value contains the map returned by the API endpoint, can we shortcut and use this?
+          {:ok, data(result, [])} |> dbg()
 
         %{validation_errors: errors} ->
           {:validation_failed, errors}
@@ -51,12 +56,20 @@ defmodule AbsintheRemote.Result do
     %{errors: [format_error(error)]}
   end
 
-  defp data(%{errors: [_ | _] = field_errors}, errors), do: {nil, field_errors ++ errors}
+  defp data(%{errors: [_ | _] = field_errors}, errors) do
+    dbg("data 1")
+    {nil, field_errors ++ errors}
+  end
 
   # Leaf
-  defp data(%{value: nil}, errors), do: {nil, errors}
+  defp data(%{value: nil}, errors) do
+    dbg("data 2")
+    # camelCase falls into this since value is not being set upstream
+    {nil, errors}
+  end
 
   defp data(%{value: value, emitter: emitter}, errors) do
+    dbg("data 3")
     # Change: don't serialize scalars
     value =
       case Type.unwrap(emitter.schema_node.type) do
@@ -72,13 +85,19 @@ defmodule AbsintheRemote.Result do
 
   # Object
   defp data(%{fields: []} = result, errors) do
+    dbg("data 4")
     {result.root_value, errors}
   end
 
   defp data(%{fields: fields, emitter: emitter, root_value: root_value}, errors) do
+    dbg("data 5")
+
+    dbg(root_value)
+
     with %{put: _} <- emitter.flags,
          true <- is_map(root_value) do
       {data, errors} = field_data(fields, errors)
+
       {Map.merge(root_value, data), errors}
     else
       false ->
@@ -90,12 +109,18 @@ defmodule AbsintheRemote.Result do
         """
 
       _ ->
-        field_data(fields, errors)
+        IO.puts("beginning field_data recursion")
+        out = field_data(fields, errors)
+        IO.puts("ending field_data recursion")
+        out
     end
   end
 
   # List
-  defp data(%{values: values}, errors), do: list_data(values, errors)
+  defp data(%{values: values}, errors) do
+    dbg("data 6")
+    list_data(values, errors)
+  end
 
   defp list_data(fields, errors, acc \\ [])
   defp list_data([], errors, acc), do: {:lists.reverse(acc), errors}
@@ -119,7 +144,11 @@ defmodule AbsintheRemote.Result do
   end
 
   defp field_data([field | fields], errors, acc) do
+    # dbg(fields)
+    IO.puts("Field: #{field_name(field.emitter)}")
     {value, errors} = data(field, errors)
+    dbg({field_name(field.emitter), value})
+    IO.puts("=========================\n\n\n")
     field_data(fields, errors, [{field_name(field.emitter), value} | acc])
   end
 

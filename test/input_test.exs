@@ -14,16 +14,26 @@ defmodule AbsintheRemote.InputTest do
       id: ID!
       content: String
       author: String
-      posts(sorting: String): [Message]
+      posts(sorting: String, page: Int): [Message]
       children: [Message]
     }
 
     type Query {
       getMessage(search: MessageSearch, sorting: String): Message
+      someIdQuery(someKey: ID): Message
     }
     """)
 
     @impl AbsintheRemote.RemoteSchema
+    def resolve_query(_query, _operation, %{
+          "someKey" => "1234"
+        }) do
+      {:ok,
+       %{
+         id: "1234"
+       }}
+    end
+
     def resolve_query(_query, _operation, %{
           "search" => %{"authorName" => author_name, "content" => content}
         }) do
@@ -98,17 +108,41 @@ defmodule AbsintheRemote.InputTest do
                  }
                }
              }
+
+    assert AbsintheRemote.run(
+             """
+             query($someKey: ID) {
+               someIdQuery(someKey: $someKey) {
+                id
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{
+               "someKey" => "1234"
+             }
+           ) ==
+             {
+               :ok,
+               %{
+                 data: %{
+                   someIdQuery: %{
+                     id: "1234"
+                   }
+                 }
+               }
+             }
   end
 
   test "can query child input types" do
     assert AbsintheRemote.run(
              """
-             query($sorting: String) {
+             query($sorting: String, $page: Int) {
               getMessage {
                 id
                 children {
                   id
-                  posts(sorting: $sorting) {
+                  posts(sorting: $sorting, page: $page) {
                     id
                   }
                 }
@@ -117,7 +151,8 @@ defmodule AbsintheRemote.InputTest do
              """,
              LocalSchema,
              variables: %{
-               "sorting" => "ASC"
+               "sorting" => "ASC",
+               "page" => nil
              }
            ) ==
              {
