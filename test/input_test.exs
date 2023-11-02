@@ -5,9 +5,15 @@ defmodule AbsintheRemote.InputTest do
     use AbsintheRemote.RemoteSchema
 
     import_sdl("""
+    enum AuthorType {
+      ADMIN
+      USER
+    }
+
     input MessageSearch {
       content: String
       authorName: String
+      authorType: AuthorType
     }
 
     type Message {
@@ -16,6 +22,7 @@ defmodule AbsintheRemote.InputTest do
       author: String
       posts(sorting: String): [Message]
       children: [Message]
+      author_type: AuthorType
     }
 
     type Query {
@@ -63,6 +70,15 @@ defmodule AbsintheRemote.InputTest do
              id: child
            }
          ]
+       }}
+    end
+
+    def resolve_query(_query, _operation, %{"search" => %{"authorType" => "ADMIN"}}) do
+      {:ok,
+       %{
+         id: "1234",
+         author: "Foo Bar",
+         author_type: "ADMIN"
        }}
     end
   end
@@ -171,6 +187,38 @@ defmodule AbsintheRemote.InputTest do
                          id: "DESC"
                        }
                      ]
+                   }
+                 }
+               }
+             }
+  end
+
+  test "handles enums correctly" do
+    assert AbsintheRemote.run(
+             """
+             query($search: MessageSearch) {
+              getMessage(search: $search) {
+                id
+                author
+                authorType
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{
+               "search" => %{
+                 "authorType" => "ADMIN"
+               }
+             }
+           ) ==
+             {
+               :ok,
+               %{
+                 data: %{
+                   getMessage: %{
+                     id: "1234",
+                     author: "Foo Bar",
+                     authorType: "ADMIN"
                    }
                  }
                }
