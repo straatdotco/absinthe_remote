@@ -1,4 +1,4 @@
-defmodule AbsintheRemoteTest do
+defmodule AbsintheRemote.QueryTest do
   use ExUnit.Case, async: true
 
   defmodule LocalSchema do
