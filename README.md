@@ -54,3 +54,5 @@ AbsintheRemote.run("""
   }
 """, MyRemoteSchema) == {:ok, %{name: "hello world"}}
 ```
+
+You can also run a mutation using the same run command, and it will end up in your resolve_query callback as expected.
