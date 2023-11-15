@@ -12,8 +12,9 @@ defmodule AbsintheRemote.RemoteSchema do
       @behaviour AbsintheRemote.RemoteSchema
 
       def hydrate(%Absinthe.Blueprint.Schema.FieldDefinition{identifier: query}, [
-            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{identifier: :query} | _
-          ]) do
+            %Absinthe.Blueprint.Schema.ObjectTypeDefinition{identifier: query_type} | _
+          ])
+          when query_type in [:query, :mutation] do
         case Atom.to_string(query) do
           "__" <> _internal ->
             # If this is an internal query (__type, __schema, etc), let it do its thing
