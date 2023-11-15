@@ -124,9 +124,9 @@ defmodule AbsintheRemote.Result do
   end
 
   # TODO: would prefer if the names / aliases were already atoms somehow
-  defp field_name(%{alias: nil, name: name}), do: String.to_existing_atom(name)
-  defp field_name(%{alias: name}), do: String.to_existing_atom(name)
-  defp field_name(%{name: name}), do: String.to_existing_atom(name)
+  defp field_name(%{alias: nil, name: name}), do: String.to_atom(name)
+  defp field_name(%{alias: name}), do: String.to_atom(name)
+  defp field_name(%{name: name}), do: String.to_atom(name)
 
   defp format_error(%Phase.Error{locations: []} = error) do
     error_object = %{message: error.message}
