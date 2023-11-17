@@ -1,4 +1,4 @@
-defmodule AbsintheRemoteTest do
+defmodule AbsintheRemote.QueryTest do
   use ExUnit.Case, async: true
 
   defmodule LocalSchema do
@@ -97,7 +97,7 @@ defmodule AbsintheRemoteTest do
            ) ==
              {:ok,
               %{
-                data: %{parent: nil},
+                data: nil,
                 errors: [
                   %{
                     locations: [%{column: 3, line: 2}],

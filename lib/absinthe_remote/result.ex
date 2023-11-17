@@ -7,6 +7,8 @@ defmodule AbsintheRemote.Result do
 
   # Produces data fit for external encoding from annotated value tree
 
+  require Logger
+
   alias Absinthe.{Blueprint, Phase, Type}
   use Absinthe.Phase
 
@@ -20,17 +22,15 @@ defmodule AbsintheRemote.Result do
     result =
       case blueprint.execution do
         %{validation_errors: [], result: result} ->
-          {:ok, data(result, [])}
+          ret = data(result, [])
+
+          {:ok, ret}
 
         %{validation_errors: errors} ->
           {:validation_failed, errors}
       end
 
     format_result(result)
-  end
-
-  defp format_result(:execution_failed) do
-    %{data: nil}
   end
 
   defp format_result({:ok, {data, []}}) do
@@ -47,16 +47,20 @@ defmodule AbsintheRemote.Result do
     %{errors: errors}
   end
 
-  defp format_result({:parse_failed, error}) do
-    %{errors: [format_error(error)]}
+  defp data(%{errors: [_ | _] = field_errors}, errors) do
+    debug_log("data 1: data(%{errors: [_ | _] = field_errors}, errors)")
+    {nil, field_errors ++ errors}
   end
 
-  defp data(%{errors: [_ | _] = field_errors}, errors), do: {nil, field_errors ++ errors}
-
   # Leaf
-  defp data(%{value: nil}, errors), do: {nil, errors}
+  defp data(%{value: nil}, errors) do
+    debug_log("data 2: (%{value: nil}, errors)")
+    # camelCase falls into this since value is not being set upstream
+    {nil, errors}
+  end
 
   defp data(%{value: value, emitter: emitter}, errors) do
+    debug_log("data 3: (%{value: value, emitter: emitter}, errors)")
     # Change: don't serialize scalars
     value =
       case Type.unwrap(emitter.schema_node.type) do
@@ -72,30 +76,35 @@ defmodule AbsintheRemote.Result do
 
   # Object
   defp data(%{fields: []} = result, errors) do
+    debug_log("data 4: (%{fields: []} = result, errors)")
     {result.root_value, errors}
   end
 
-  defp data(%{fields: fields, emitter: emitter, root_value: root_value}, errors) do
-    with %{put: _} <- emitter.flags,
-         true <- is_map(root_value) do
-      {data, errors} = field_data(fields, errors)
-      {Map.merge(root_value, data), errors}
-    else
-      false ->
-        raise """
-        Invalid use of `@put` directive.
+  defp data(%{fields: fields}, errors) do
+    debug_log("data 5: (%{fields: fields, emitter: emitter, root_value: root_value}, errors)")
 
-        The `@put` directive can only be used on fields that return maps or lists
-        of maps.
-        """
+    case hd(fields) do
+      %{errors: [_ | _] = field_errors} ->
+        {nil, field_errors ++ errors}
 
-      _ ->
-        field_data(fields, errors)
+      field ->
+        selections =
+          Enum.map(field.emitter.selections, fn %Absinthe.Blueprint.Document.Field{} = field ->
+            field_name(field)
+          end)
+
+        values = Map.take(field.root_value, selections)
+
+        out = Map.new([{field_name(field.emitter), values}])
+        {out, []}
     end
   end
 
   # List
-  defp data(%{values: values}, errors), do: list_data(values, errors)
+  defp data(%{values: values}, errors) do
+    debug_log("data 6: (%{values: values}, errors)")
+    list_data(values, errors)
+  end
 
   defp list_data(fields, errors, acc \\ [])
   defp list_data([], errors, acc), do: {:lists.reverse(acc), errors}
@@ -103,24 +112,6 @@ defmodule AbsintheRemote.Result do
   defp list_data([%{errors: errs} = field | fields], errors, acc) do
     {value, errors} = data(field, errors)
     list_data(fields, errs ++ errors, [value | acc])
-  end
-
-  defp field_data(fields, errors, acc \\ [])
-  defp field_data([], errors, acc), do: {Map.new(acc), errors}
-
-  defp field_data([%Absinthe.Resolution{} = res | _], _errors, _acc) do
-    raise """
-    Found unresolved resolution struct!
-
-    You probably forgot to run the resolution phase again.
-
-    #{inspect(res)}
-    """
-  end
-
-  defp field_data([field | fields], errors, acc) do
-    {value, errors} = data(field, errors)
-    field_data(fields, errors, [{field_name(field.emitter), value} | acc])
   end
 
   # TODO: would prefer if the names / aliases were already atoms somehow
@@ -153,4 +144,10 @@ defmodule AbsintheRemote.Result do
   end
 
   defp format_location(_), do: []
+
+  defp debug_log(message) do
+    if Application.get_env(:absinthe_remote, :should_log, false) do
+      Logger.debug(message)
+    end
+  end
 end
