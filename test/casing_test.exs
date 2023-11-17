@@ -14,17 +14,34 @@ defmodule AbsintheRemote.CasingTest do
 
     type Query {
       getMessage(id: ID!): Message
+      all_messages: [Message]
     }
     """)
 
     @impl AbsintheRemote.RemoteSchema
+    def resolve_query(_query, "AllMessages", _variables) do
+      {:ok,
+       %{
+         all_messages: [
+           %{
+             id: "1234",
+             content: "Hello world!",
+             authorName: "Mr Foo Bar",
+             author_age: 32
+           }
+         ]
+       }}
+    end
+
     def resolve_query(_query, _operation, _variables) do
       {:ok,
        %{
-         id: "1234",
-         content: "Hello world!",
-         authorName: "Mr Foo Bar",
-         author_age: 32
+         getMessage: %{
+           id: "1234",
+           content: "Hello world!",
+           authorName: "Mr Foo Bar",
+           author_age: 32
+         }
        }}
     end
   end
@@ -60,4 +77,29 @@ defmodule AbsintheRemote.CasingTest do
                }
              }
   end
+
+  # test "handles various query casing" do
+  #   assert AbsintheRemote.run(
+  #            """
+  #            query AllMessages {
+  #             all_messages {
+  #               id
+  #             }
+  #            }
+  #            """,
+  #            LocalSchema
+  #          ) ==
+  #            {
+  #              :ok,
+  #              %{
+  #                data: %{
+  #                  all_messages: [
+  #                    %{
+  #                      id: "1234"
+  #                    }
+  #                  ]
+  #                }
+  #              }
+  #            }
+  # end
 end

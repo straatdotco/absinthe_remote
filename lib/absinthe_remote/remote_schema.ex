@@ -45,10 +45,13 @@ defmodule AbsintheRemote.RemoteSchema do
                resolution.private.operation_name,
                variables
              ) do
-          {:ok, result} ->
+          {:ok, result} when is_map(result) ->
             # pop the value out of the inner struct,
             # of if it doesn't exist, just use the result
             {:ok, Map.get(result, String.to_atom(query.name), result)}
+
+          {:ok, result} ->
+            {:ok, result}
 
           other ->
             other

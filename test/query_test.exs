@@ -97,7 +97,7 @@ defmodule AbsintheRemote.QueryTest do
            ) ==
              {:ok,
               %{
-                data: %{parent: nil},
+                data: nil,
                 errors: [
                   %{
                     locations: [%{column: 3, line: 2}],
