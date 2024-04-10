@@ -27,10 +27,25 @@ defmodule AbsintheRemote.InputTest do
 
     type Query {
       getMessage(search: MessageSearch, sorting: String): Message
+      getMessages(ids: [ID]): [Message]
     }
     """)
 
     @impl AbsintheRemote.RemoteSchema
+    def resolve_query(_query, "HandleLists", %{
+          "ids" => ["1", "2"]
+        }) do
+      {:ok,
+       [
+         %{
+           id: "1"
+         },
+         %{
+           id: "2"
+         }
+       ]}
+    end
+
     def resolve_query(_query, _operation, %{
           "search" => %{"authorName" => author_name, "content" => content}
         }) do
@@ -220,6 +235,37 @@ defmodule AbsintheRemote.InputTest do
                      author: "Foo Bar",
                      authorType: "ADMIN"
                    }
+                 }
+               }
+             }
+  end
+
+  test "handles lists correctly" do
+    assert AbsintheRemote.run(
+             """
+             query HandleLists($ids: [ID]) {
+              getMessages(ids: $ids) {
+                id
+              }
+             }
+             """,
+             LocalSchema,
+             variables: %{
+               "ids" => ["1", "2"]
+             }
+           ) ==
+             {
+               :ok,
+               %{
+                 data: %{
+                   getMessages: [
+                     %{
+                       id: "1"
+                     },
+                     %{
+                       id: "2"
+                     }
+                   ]
                  }
                }
              }

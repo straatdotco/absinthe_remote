@@ -45,10 +45,13 @@ defmodule AbsintheRemote.RemoteSchema do
                resolution.private.operation_name,
                variables
              ) do
-          {:ok, result} ->
+          {:ok, result} when is_map(result) ->
             # pop the value out of the inner struct,
             # of if it doesn't exist, just use the result
             {:ok, Map.get(result, String.to_atom(query.name), result)}
+
+          {:ok, result} ->
+            {:ok, result}
 
           other ->
             other
@@ -97,7 +100,7 @@ defmodule AbsintheRemote.RemoteSchema do
       defp argument_to_query_variable(%Absinthe.Blueprint.Input.Argument{} = arg) do
         # Important to use the normalized fields because they are what the schema actually calls for
         key = fetch_key(arg)
-        value = fetch_normalized_value(arg.input_value.normalized)
+        value = fetch_normalized_value(key, arg.input_value.normalized)
 
         if key do
           {key, value}
@@ -117,22 +120,32 @@ defmodule AbsintheRemote.RemoteSchema do
 
       defp fetch_key(%Absinthe.Blueprint.Input.Argument{name: name}), do: name
 
-      defp fetch_normalized_value(%Absinthe.Blueprint.Input.Object{} = obj) do
+      defp fetch_normalized_value(key, %Absinthe.Blueprint.Input.Object{} = obj) do
         # Since this is an object, we need to recurse a bit
         obj.fields
         |> Enum.map(fn %Absinthe.Blueprint.Input.Field{} = field ->
-          {field.name, fetch_normalized_value(field.input_value.normalized)}
+          {field.name, fetch_normalized_value(key, field.input_value.normalized)}
         end)
         |> Enum.into(%{})
       end
 
-      defp fetch_normalized_value(%Absinthe.Blueprint.Input.Null{}), do: nil
+      defp fetch_normalized_value(key, %Absinthe.Blueprint.Input.List{items: items}) do
+        # Since this is a list, we need to recurse a bit
+        items
+        |> Enum.map(fn %Absinthe.Blueprint.Input.Value{} = field ->
+          fetch_normalized_value(key, field.normalized)
+        end)
+      end
 
-      defp fetch_normalized_value(some_input) do
+      defp fetch_normalized_value(_key, %Absinthe.Blueprint.Input.Null{}), do: nil
+
+      defp fetch_normalized_value(_, nil), do: nil
+
+      defp fetch_normalized_value(key, some_input) do
         if is_map(some_input) and Map.has_key?(some_input, :value) do
           some_input.value
         else
-          raise "Unknown input type #{inspect(some_input)}"
+          raise "Unknown input type #{inspect(some_input)} for #{key}"
         end
       end
     end
