@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.0
+
+- Feature: Support list input types
+- Feature: Show key and possible value when erroring on an input type we don't yet support
+
 ## 0.2.2
 
 - Fix: Bug where nested inputs were not recursed into.
