@@ -93,7 +93,7 @@ defmodule AbsintheRemote.InputTest do
        %{
          id: "1234",
          author: "Foo Bar",
-         author_type: "ADMIN"
+         authorType: "ADMIN"
        }}
     end
   end
